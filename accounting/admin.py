@@ -40,4 +40,7 @@ class AccountAdmin(admin.ModelAdmin):
     def balance(self, obj):
         return '{0:.2f} kr'.format(obj.balance)
 
-admin.site.register(Deposit)
+
+@admin.register(Deposit)
+class DepositAdmin(admin.ModelAdmin):
+    list_display = ('date', 'account', 'amount')

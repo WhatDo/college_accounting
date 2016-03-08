@@ -38,23 +38,22 @@ class ProductForm(ModelForm):
             self.fields['price'].initial = self.instance.current_price.amount
 
     def save(self, commit=True):
-        product = super().save(commit)
+        product = super().save()
 
         new_price = self.cleaned_data['price']
 
         if not product.current_price or new_price != product.current_price.amount:
-            product.price_history.add(Price.objects.create(amount=new_price, product=product))
+            Price.objects.create(amount=new_price, product=product)
 
         return product
 
 
 class AccountForm(ModelForm):
-    balance = forms.DecimalField(decimal_places=2)
+    balance = forms.DecimalField(decimal_places=2, required=False)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if self.instance and self.instance.pk:
-            balance = self.fields['balance']
-            balance.initial = self.instance.balance
-            balance.widget.attrs['readonly'] = True
-            balance.widget.attrs['disabled'] = True
+        balance = self.fields['balance']
+        balance.widget.attrs['readonly'] = True
+        balance.widget.attrs['disabled'] = True
+        balance.initial = self.instance.balance if self.instance and self.instance.pk else None

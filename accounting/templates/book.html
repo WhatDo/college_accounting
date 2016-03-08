@@ -1,24 +1,64 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <link rel="stylesheet" href="https://code.getmdl.io/1.1.2/material.indigo-pink.min.css">
+    <script defer src="https://code.getmdl.io/1.1.2/material.min.js"></script>
     <meta charset="UTF-8">
     <title>{{ book }}</title>
+    <style type="text/css">
+        body {
+            width: 100%;
+        }
+
+        .container {
+            padding: 40px;
+        }
+
+        .center-padding {
+            width: 50%;
+        }
+
+        .center-parent {
+            display: table-row;
+        }
+
+        .center-element {
+            display: table-cell;
+        }
+    </style>
 </head>
 <body>
-<table>
-    <tr>
-        <td>&nbsp;</td>
-
-        <td>Balance</td>
-
-    </tr>
-    {% for account in book.accounts.all %}
+<div class="container">
+<div class="center-parent">
+    <div class="center-padding center-element"></div>
+    <table class="mdl-data-table mdl-js-data-table mdl-shadow--2dp center-element">
+        <thead>
         <tr>
-            <td>{{ account }}</td>
-            <td>{{ account.balance }}</td>
-        </tr>
-    {% endfor %}
+            <th>&nbsp;</th>
+            {% for product in book.products.all %}
+                <th>{{ product }}</th>
+            {% endfor %}
+            <th>Spent</th>
+            <th>Balance</th>
 
-</table>
+        </tr>
+        </thead>
+        <tbody>
+        {% for account in book.accounts.all %}
+            <tr>
+                <td class="mdl-data-table__cell--non-numeric">{{ account }}</td>
+                {% for product in book.products.all %}
+                    <td>{% get_item purchases key1=account.id key2=product.id %}</td>
+                {% endfor %}
+                <td>{% get_item purchases account.id 'spent' %}</td>
+                <td>{{ account.balance }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <div class="center-padding center-element"></div>
+</div>
+</div>
 </body>
 </html>

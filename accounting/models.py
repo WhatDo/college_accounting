@@ -4,7 +4,6 @@ from django.db import models, connection
 
 class Book(models.Model):
     name = models.CharField(max_length=255)
-    accounts = models.ManyToManyField(settings.AUTH_USER_MODEL, through='Account')
     deposit = models.DecimalField(max_digits=7, decimal_places=2)
 
     def __str__(self):
@@ -34,7 +33,7 @@ class Price(models.Model):
 
 class Account(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL)
-    book = models.ForeignKey(Book)
+    book = models.ForeignKey(Book, related_name='accounts')
     paid_deposit = models.BooleanField(default=False)
 
     @property
@@ -77,7 +76,7 @@ SELECT coalesce((SELECT Sum(amount) FROM accounting_deposit WHERE account_id = %
 
 
 class Purchase(models.Model):
-    date = models.DateField(auto_now_add=True)
+    date = models.DateTimeField(auto_now_add=True)
     account = models.ForeignKey(Account, related_name='purchases')
 
     @property
@@ -110,6 +109,25 @@ class PurchaseItem(models.Model):
     purchase = models.ForeignKey(Purchase, related_name='items')
     amount = models.PositiveIntegerField()
 
+    @property
+    def cost(self):
+        cursor = connection.cursor()
+
+        cursor.execute("""
+SELECT price * count AS cost FROM (
+SELECT accounting_price.amount AS price,
+       accounting_purchaseitem.amount AS count,
+       date,
+       accounting_purchaseitem.purchase_id,
+       accounting_purchaseitem.id
+FROM accounting_price
+  JOIN accounting_product ON accounting_price.product_id = accounting_product.id
+  JOIN accounting_purchaseitem ON accounting_product.id = accounting_purchaseitem.product_id ORDER BY date DESC)
+WHERE id = %s
+        """, [self.pk])
+
+        return cursor.fetchone()[0]
+
     def __str__(self):
         return '{} amount of {}'.format(self.amount, self.product)
 
@@ -118,3 +136,9 @@ class Deposit(models.Model):
     account = models.ForeignKey(Account, related_name='deposits')
     date = models.DateField(auto_now_add=True)
     amount = models.DecimalField(max_digits=7, decimal_places=2)
+
+    def __str__(self):
+        return '{} kr'.format(self.amount)
+
+    class Meta:
+        ordering = ('-date',)

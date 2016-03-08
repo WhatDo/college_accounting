@@ -1,3 +1,4 @@
 db.sqlite3
 kkaccounting/local_settings.py
 .idea/
+**/*.pyc
