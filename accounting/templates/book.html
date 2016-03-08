@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ book }}</title>
+</head>
+<body>
+<table>
+    <tr>
+        <td>&nbsp;</td>
+
+        <td>Balance</td>
+
+    </tr>
+    {% for account in book.accounts.all %}
+        <tr>
+            <td>{{ account }}</td>
+            <td>{{ account.balance }}</td>
+        </tr>
+    {% endfor %}
+
+</table>
+</body>
+</html>
