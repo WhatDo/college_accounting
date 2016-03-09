@@ -26,39 +26,59 @@
         .center-element {
             display: table-cell;
         }
+
+        .good {
+            background: #55BB55;
+            color: white;
+        }
+
+        .bad {
+            background: #FF5555;
+            color: white;
+        }
     </style>
 </head>
 <body>
 <div class="container">
-<div class="center-parent">
-    <div class="center-padding center-element"></div>
-    <table class="mdl-data-table mdl-js-data-table mdl-shadow--2dp center-element">
-        <thead>
-        <tr>
-            <th>&nbsp;</th>
-            {% for product in book.products.all %}
-                <th>{{ product }}</th>
-            {% endfor %}
-            <th>Spent</th>
-            <th>Balance</th>
-
-        </tr>
-        </thead>
-        <tbody>
-        {% for account in book.accounts.all %}
+    <div class="center-parent">
+        <div class="center-padding center-element"></div>
+        <table class="mdl-data-table mdl-js-data-table mdl-shadow--2dp center-element">
+            <thead>
             <tr>
-                <td class="mdl-data-table__cell--non-numeric">{{ account }}</td>
+                <th>&nbsp;</th>
                 {% for product in book.products.all %}
-                    <td>{% get_item purchases key1=account.id key2=product.id %}</td>
+                    <th>{{ product }}</th>
                 {% endfor %}
-                <td>{% get_item purchases account.id 'spent' %}</td>
-                <td>{{ account.balance }}</td>
+                <th>Spent</th>
+                <th>Balance</th>
+                <th>Paid</th>
+                <th>Deposit</th>
+
             </tr>
-        {% endfor %}
-        </tbody>
-    </table>
-    <div class="center-padding center-element"></div>
-</div>
+            </thead>
+            <tbody>
+            {% for account in book.accounts.all %}
+                {% get_item purchases account.id 'spent' as spent %}
+                {% get_item purchases key1=account.id key2='deposited' as paid %}
+                <tr>
+                    <td class="mdl-data-table__cell--non-numeric">{{ account }}</td>
+                    {% for product in book.products.all %}
+                        <td>{% get_item purchases key1=account.id key2=product.id %}</td>
+                    {% endfor %}
+                    <td>{{ spent|floatformat:2 }} kr</td>
+                    <td{% if account.balance < book.deposit|neg %} class="bad"{% endif %}>{{ account.balance|floatformat:2 }} kr</td>
+                    <td>{{ paid|floatformat:2 }} kr</td>
+                    {% if account.paid_deposit %}
+                        <td class="good">{{ book.deposit|floatformat:2 }} kr</td>
+                    {% else %}
+                        <td class="bad">0.00 kr</td>
+                    {% endif %}
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        <div class="center-padding center-element"></div>
+    </div>
 </div>
 </body>
 </html>
