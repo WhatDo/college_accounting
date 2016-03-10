@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
     <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
     <link rel="stylesheet" href="https://code.getmdl.io/1.1.2/material.indigo-pink.min.css">
     <script defer src="https://code.getmdl.io/1.1.2/material.min.js"></script>
-    <meta charset="UTF-8">
     <title>{{ book }}</title>
     <style type="text/css">
         body {
@@ -36,49 +38,95 @@
             background: #FF5555;
             color: white;
         }
+
+        .acc-drawer {
+            border: none;
+        }
+
+        .acc-navigation {
+            -webkit-flex-grow: 1;
+            flex-grow: 1;
+        }
+
+        .acc-drawer .mdl-menu .mdl-menu__item {
+            display: -webkit-flex;
+            display: -ms-flexbox;
+            display: flex;
+            -webkit-align-items: center;
+            -ms-flex-align: center;
+            align-items: center;
+        }
+
+        .acc-layout .acc-navigation .mdl-navigation__link {
+            display: -webkit-flex !important;
+            display: flex !important;
+            -webkit-align-items: center;
+            align-items: center;
+            -webkit-flex-direction: row;
+            flex-direction: row;
+        }
+
+        .acc-navigation .mdl-navigation__link .material-icons {
+            margin-right: 32px;
+        }
     </style>
 </head>
 <body>
-<div class="container">
-    <div class="center-parent">
-        <div class="center-padding center-element"></div>
-        <table class="mdl-data-table mdl-js-data-table mdl-shadow--2dp center-element">
-            <thead>
-            <tr>
-                <th>&nbsp;</th>
-                {% for product in book.products.all %}
-                    <th>{{ product }}</th>
-                {% endfor %}
-                <th>Spent</th>
-                <th>Balance</th>
-                <th>Paid</th>
-                <th>Deposit</th>
-
-            </tr>
-            </thead>
-            <tbody>
-            {% for account in book.accounts.all %}
-                {% get_item purchases account.id 'spent' as spent %}
-                {% get_item purchases key1=account.id key2='deposited' as paid %}
-                <tr>
-                    <td class="mdl-data-table__cell--non-numeric">{{ account }}</td>
-                    {% for product in book.products.all %}
-                        <td>{% get_item purchases key1=account.id key2=product.id %}</td>
-                    {% endfor %}
-                    <td>{{ spent|floatformat:2 }} kr</td>
-                    <td{% if account.balance < book.deposit|neg %} class="bad"{% endif %}>{{ account.balance|floatformat:2 }} kr</td>
-                    <td>{{ paid|floatformat:2 }} kr</td>
-                    {% if account.paid_deposit %}
-                        <td class="good">{{ book.deposit|floatformat:2 }} kr</td>
-                    {% else %}
-                        <td class="bad">0.00 kr</td>
-                    {% endif %}
-                </tr>
-            {% endfor %}
-            </tbody>
-        </table>
-        <div class="center-padding center-element"></div>
+<div class="acc-layout mdl-layout mdl-js-layout mdl-layout--fixed-drawer">
+    <div class="acc-drawer mdl-layout__drawer mdl-color--blue-grey-900 mdl-color-text--blue-grey-50">
+        <header>
+            <h3>Overview</h3>
+        </header>
+        <nav class="acc-navigation mdl-navigation mdl-color--blue-grey-800">
+            <a class="mdl-navigation__link" href=""><i class="mdl-color-text--blue-grey-400 material-icons"
+                                                       role="presentation">home</i>Overview</a>
+            <a class="mdl-navigation__link" href=""><i class="mdl-color-text--blue-grey-400 material-icons"
+                                                       role="presentation">report</i>Report</a>
+        </nav>
     </div>
+    <main class="mdl-layout__content">
+        <div class="center-parent">
+            <div class="center-padding center-element"></div>
+            <table class="mdl-data-table mdl-js-data-table mdl-shadow--2dp center-element">
+                <thead>
+                <tr>
+                    <th>&nbsp;</th>
+                    {% for product in book.products.all %}
+                        <th>{{ product }}</th>
+                    {% endfor %}
+                    <th>Spent</th>
+                    <th>Balance</th>
+                    <th>Paid</th>
+                    <th>Deposit</th>
+
+                </tr>
+                </thead>
+                <tbody>
+                {% for account in book.accounts.all %}
+                    {% get_item purchases account.id 'spent' as spent %}
+                    {% get_item purchases key1=account.id key2='deposited' as paid %}
+                    <tr>
+                        <td class="mdl-data-table__cell--non-numeric">{{ account }}</td>
+                        {% for product in book.products.all %}
+                            <td>{% get_item purchases key1=account.id key2=product.id %}</td>
+                        {% endfor %}
+                        <td>{{ spent|floatformat:2 }} kr</td>
+                        <td{% if account.balance < book.deposit|neg %}
+                            class="bad"{% endif %}>{{ account.balance|floatformat:2 }} kr
+                        </td>
+                        <td>{{ paid|floatformat:2 }} kr</td>
+                        {% if account.paid_deposit %}
+                            <td class="good">{{ book.deposit|floatformat:2 }} kr</td>
+                        {% else %}
+                            <td class="bad">0.00 kr</td>
+                        {% endif %}
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            <div class="center-padding center-element"></div>
+        </div>
+    </main>
 </div>
 </body>
 </html>

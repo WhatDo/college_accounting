@@ -53,6 +53,10 @@ def book(request, book_name):
                 p_dict[item.product_id] = p_item + item.amount
 
         dsq = acc.deposits.all()
+        if low_date:
+            dsq = dsq.filter(date__gte=low_date)
+        if high_date:
+            dsq = dsq.filter(date__lte=high_date)
 
         p_dict['deposited'] = dsq.aggregate(paid=Coalesce(Sum('amount'), 0))['paid']
         p_dict['spent'] = spent

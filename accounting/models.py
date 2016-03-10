@@ -1,5 +1,8 @@
 from django.conf import settings
 from django.db import models, connection
+from django.db.models import Sum
+from django.db.models.functions import Coalesce
+from django.utils import timezone
 
 
 class Book(models.Model):
@@ -8,6 +11,17 @@ class Book(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class PricedItem(models.Model):
+    id = models.BigIntegerField(primary_key=True)
+    purchase = models.ForeignKey('Purchase', on_delete=models.DO_NOTHING, related_name='priced_items')
+    product = models.ForeignKey('Product', on_delete=models.DO_NOTHING, related_name='priced_items')
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+
+    class Meta:
+        managed = False
+        db_table = 'accounting_priceditem'
 
 
 class Product(models.Model):
@@ -38,35 +52,10 @@ class Account(models.Model):
 
     @property
     def balance(self):
-        cursor = connection.cursor()
-        cursor.execute("""
-SELECT coalesce((SELECT Sum(amount) FROM accounting_deposit WHERE account_id = %s),0) -
-       coalesce((
-  SELECT Sum(cost)
-  FROM (
-    SELECT
-      price * count AS cost,
-      account_id
-    FROM (
-      SELECT
-        accounting_price.amount        AS price,
-        accounting_purchaseitem.amount AS count,
-        accounting_purchaseitem.id,
-        accounting_purchase.account_id
-      FROM accounting_price
-        JOIN accounting_product ON accounting_price.product_id = accounting_product.id
-        JOIN accounting_purchaseitem ON accounting_product.id = accounting_purchaseitem.product_id
-        JOIN accounting_purchase ON accounting_purchaseitem.purchase_id = accounting_purchase.id
-      ORDER BY accounting_price.date
-        DESC
-    )
-    GROUP BY id
-  )
-  WHERE account_id = %s
-),0)
-        """, [self.pk, self.pk])
-
-        return cursor.fetchone()[0]
+        deposit = self.deposits.all().aggregate(total=Coalesce(Sum('amount'), 0))['total']
+        purchases = PricedItem.objects.filter(purchase__account=self).aggregate(
+            total=Coalesce(Sum('price'), 0))['total']
+        return deposit - purchases
 
     def __str__(self):
         return str(self.user)
@@ -76,26 +65,13 @@ SELECT coalesce((SELECT Sum(amount) FROM accounting_deposit WHERE account_id = %
 
 
 class Purchase(models.Model):
-    date = models.DateTimeField(auto_now_add=True)
+    date = models.DateTimeField(default=timezone.now)
     account = models.ForeignKey(Account, related_name='purchases')
 
     @property
     def total_price(self):
-        cursor = connection.cursor()
-        cursor.execute("""
-SELECT Sum(cost) FROM (
-SELECT price * count AS cost FROM (
-SELECT accounting_price.amount AS price,
-       accounting_purchaseitem.amount AS count,
-       date,
-       accounting_purchaseitem.purchase_id,
-       accounting_purchaseitem.id
-FROM accounting_price
-  JOIN accounting_product ON accounting_price.product_id = accounting_product.id
-  JOIN accounting_purchaseitem ON accounting_product.id = accounting_purchaseitem.product_id ORDER BY date DESC
-) WHERE purchase_id = %s AND date <= %s GROUP BY id);
-        """, [self.pk, self.date])
-        return cursor.fetchone()[0]
+        return PricedItem.objects.filter(purchase=self).aggregate(
+            total=Coalesce(Sum('price'), 0))['total']
 
     def __str__(self):
         return '{}: {}'.format(self.date, self.account)
@@ -111,22 +87,7 @@ class PurchaseItem(models.Model):
 
     @property
     def cost(self):
-        cursor = connection.cursor()
-
-        cursor.execute("""
-SELECT price * count AS cost FROM (
-SELECT accounting_price.amount AS price,
-       accounting_purchaseitem.amount AS count,
-       date,
-       accounting_purchaseitem.purchase_id,
-       accounting_purchaseitem.id
-FROM accounting_price
-  JOIN accounting_product ON accounting_price.product_id = accounting_product.id
-  JOIN accounting_purchaseitem ON accounting_product.id = accounting_purchaseitem.product_id ORDER BY date DESC)
-WHERE id = %s
-        """, [self.pk])
-
-        return cursor.fetchone()[0]
+        return PricedItem.objects.get(pk=self.pk).price
 
     def __str__(self):
         return '{} amount of {}'.format(self.amount, self.product)
@@ -134,7 +95,7 @@ WHERE id = %s
 
 class Deposit(models.Model):
     account = models.ForeignKey(Account, related_name='deposits')
-    date = models.DateField(auto_now_add=True)
+    date = models.DateField(default=timezone.now)
     amount = models.DecimalField(max_digits=7, decimal_places=2)
 
     def __str__(self):
